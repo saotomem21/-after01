@@ -1,0 +1,6 @@
+id,text,sentiment,stance
+1,"この計画はとても素晴らしい！",positive,strongly_agree
+2,"まあ、悪くはないと思う。",neutral,agree
+3,"どちらでもありません。",neutral,neutral
+4,"この提案には正直反対です。",negative,disagree
+5,"絶対に受け入れられない。",negative,strongly_disagree

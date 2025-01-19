@@ -1,0 +1,67 @@
+# ===============================================
+# Sentiment & Stance Calculation Specification
+# ===============================================
+
+pipeline_spec:
+  # ---------------------------------------------
+  # 1. 感情分析 (Sentiment Analysis)
+  # ---------------------------------------------
+  sentiment_calculation:
+    steps:
+      - dynamic_threshold:
+          base_threshold: 0.50
+          length_factor_min: 0.5   # clamp下限
+          length_factor_max: 1.0   # clamp上限
+          length_divisor: 20       # len_text / 20
+          factor_coefficient: 0.03 # 0.03 * length_factor
+      - normalization:
+          case_if_score_over_threshold:  "(score - dynamic_threshold) / (1.0 - dynamic_threshold)"
+          case_else_score_under_threshold: "(score - 0.0) / dynamic_threshold"
+          clamp_range: [0.0, 1.0]
+      - rounding:
+          decimal_places: 3
+      - label_mapping:
+          if_model_label_POSITIVE: "POSITIVE"
+          if_model_label_NEGATIVE: "NEGATIVE"
+          else_label: "NEUTRAL"
+
+  # ---------------------------------------------
+  # 2. スタンス分析 (Stance Analysis)
+  # ---------------------------------------------
+  stance_calculation:
+    steps:
+      - softmax_layer:
+          dimension: -1
+      - argmax:
+          dimension: -1
+      - rounding:
+          decimal_places: 3
+      - label_mapping:
+          0: "強く賛成"
+          1: "賛成"
+          2: "中立"
+          3: "反対"
+          4: "強く反対"
+
+  # ---------------------------------------------
+  # 3. 出力フォーマット例
+  # ---------------------------------------------
+  output_example:
+    row_structure:
+      - column: "number"
+        desc: "通し番号（1-based）"
+      - column: "text"
+        desc: "入力テキストのそのままの文字列"
+      - column: "sentiment"
+        desc: "ラベル + スコア例: 'POSITIVE (0.362)'"
+      - column: "sentiment_score"
+        desc: "0.000～1.000"
+      - column: "stance"
+        desc: "ラベル + スコア例: '強く反対 (0.725)'"
+      - column: "stance_score"
+        desc: "0.000～1.000"
+
+notes:
+  - "この仕様は事前学習モデルによる暫定の評価方法です。タスクに合わせたファインチューニングが必要です。"
+  - "動的閾値はあくまでも暫定ロジックであり、不要であれば固定0.5などに修正してOKです。"
+  - "スタンス分析は5クラス分類前提です。クラス数を変更する場合、上記argmax→label_mappingを改変します。"
